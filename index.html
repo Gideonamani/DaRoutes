@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bus Route Visualization</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-omnivore/0.3.4/leaflet-omnivore.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <style>
+        #map { height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([-6.8, 39.25], 12);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Load the KML file using omnivore
+        omnivore.kml('Bus Route Paths.kml')
+            .on('ready', function(e) {
+                map.fitBounds(e.target.getBounds());
+            })
+            .on('error', function(e) {
+                console.error("Error loading KML file:", e.error);
+            })
+            .addTo(map);
+
+        // Load and parse the CSV file for bus stops
+        fetch('Kawe-Gerezani.csv')
+            .then(response => response.text())
+            .then(csvData => {
+                const stops = Papa.parse(csvData, { header: true }).data;
+                stops.forEach(stop => {
+                    const lat = parseFloat(stop.lat);
+                    const lng = parseFloat(stop.lon);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        L.marker([lat, lng]).addTo(map).bindPopup(stop.StopName);
+                    } else {
+                        console.warn(`Invalid coordinates for stop: ${stop.StopName}`);
+                    }
+                });
+            })
+            .catch(error => {
+                console.error("Error loading CSV file:", error);
+            });
+
+    </script>
+</body>
+</html>
