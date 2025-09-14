@@ -26,8 +26,8 @@ async function bootstrap() {
         const coords = feature?.geometry?.coordinates as [number, number];
         const coordLatLon: [number, number] = [coords[1], coords[0]];
         const popupHtml = `<div class="stop-popup"><strong>${name}</strong><div style="margin-top:6px;display:flex;gap:6px;">`+
-          `<button class="btn mini" data-role="set-from">Set as From</button>`+
-          `<button class="btn mini" data-role="set-to">Set as To</button>`+
+          `<button type="button" class="btn mini" data-role="set-from">Set as From</button>`+
+          `<button type="button" class="btn mini" data-role="set-to">Set as To</button>`+
           `</div></div>`;
         layer.bindPopup(popupHtml);
         layer.on('click', () => {
@@ -42,10 +42,15 @@ async function bootstrap() {
         });
         layer.on('popupopen', (e: any) => {
           const container = e.popup.getElement() as HTMLElement;
-          const fromBtn = container.querySelector('[data-role="set-from"]') as HTMLButtonElement | null;
-          const toBtn = container.querySelector('[data-role="set-to"]') as HTMLButtonElement | null;
-          fromBtn?.addEventListener('click', () => controlAPIPlaceholder.setPoint && controlAPIPlaceholder.setPoint('from', coordLatLon));
-          toBtn?.addEventListener('click', () => controlAPIPlaceholder.setPoint && controlAPIPlaceholder.setPoint('to', coordLatLon));
+          if ((L as any).DomEvent?.disableClickPropagation) {
+            (L as any).DomEvent.disableClickPropagation(container);
+          }
+          setTimeout(() => {
+            const fromBtn = container.querySelector('[data-role="set-from"]') as HTMLButtonElement | null;
+            const toBtn = container.querySelector('[data-role="set-to"]') as HTMLButtonElement | null;
+            fromBtn?.addEventListener('click', (ev) => { ev.preventDefault(); controlAPIPlaceholder.setPoint && controlAPIPlaceholder.setPoint('from', coordLatLon); (layer as any).closePopup && (layer as any).closePopup(); });
+            toBtn?.addEventListener('click', (ev) => { ev.preventDefault(); controlAPIPlaceholder.setPoint && controlAPIPlaceholder.setPoint('to', coordLatLon); (layer as any).closePopup && (layer as any).closePopup(); });
+          }, 0);
         });
       },
     }).addTo(map);
