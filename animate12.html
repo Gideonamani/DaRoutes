@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Animate KML Path with Bus Stops</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-kml@0.1.0/leaflet-kml.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <style>
+        #map { height: 80vh; }
+        #controls {
+            margin: 10px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+        .bus-icon {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+        }     
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <label>
+            From (lat, lon): 
+            <input type="text" id="from" placeholder="-6.8, 39.25">
+        </label>
+        <label>
+            To (lat, lon): 
+            <input type="text" id="to" placeholder="-6.9, 39.3">
+        </label>
+        <button id="visualize">Visualize</button>
+        <button id="calculate-fare">Calculate Fare</button>
+    </div>
+    <div id="map"></div>
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([-6.8, 39.25], 15);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Bus icon
+        const busIcon = L.divIcon({
+            className: 'bus-icon',
+            html: '<div>🚌</div>',
+            iconSize: [50, 50],
+            iconAnchor: [25, 25]
+        });
+
+        let busMarker; // Placeholder for the moving bus marker
+
+        // Global variables to store KML and CSV data
+        let coordinates = [];
+        let busStops = [];
+
+        // Load the KML file
+        fetch('Bus Route Paths.kml')
+            .then(response => response.text())
+            .then(kmlText => {
+                const parser = new DOMParser();
+                const kml = parser.parseFromString(kmlText, 'text/xml');
+
+                const placemarks = kml.getElementsByTagName('Placemark');
+                for (let i = 0; i < placemarks.length; i++) {
+                    const coordsText = placemarks[i].getElementsByTagName('coordinates')[0].textContent.trim();
+                    coordsText.split(' ').forEach(coordPair => {
+                        const [lng, lat] = coordPair.split(',').map(Number);
+                        coordinates.push([lat, lng]); 
+                    });
+                }
+                console.log(coordinates); // 178 points
+
+                const animatedPolyline = L.polyline([], { color: 'blue', weight: 5 }).addTo(map);
+                let index = 0;
+
+                function animate() {
+                    if (index < coordinates.length) {
+                        animatedPolyline.addLatLng(coordinates[index]);
+                        
+                        // Update the bus marker position
+                        if (busMarker) {
+                            busMarker.setLatLng(coordinates[index]);
+                        } else {
+                            busMarker = L.marker(coordinates[index], { icon: busIcon }).addTo(map);
+                        }
+
+                        // Define a buffer around the map bounds
+                        const bufferFactor = 0.001; // Adjust this value for a larger or smaller buffer
+                        const currentPoint = coordinates[index];
+                        const mapBounds = map.getBounds();
+                        const bufferedBounds = L.latLngBounds(
+                            [
+                                [mapBounds.getSouth() - bufferFactor, mapBounds.getWest() - bufferFactor],
+                                [mapBounds.getNorth() + bufferFactor, mapBounds.getEast() + bufferFactor]
+                            ]
+                        );
+
+                        // Draw buffered bounds for visualization
+                        L.rectangle(bufferedBounds, { color: 'red', weight: 1, fillOpacity: 0 }).addTo(map);
+
+                        // Re-center the map if the marker goes out of the buffered bounds
+                        if (!bufferedBounds.contains(currentPoint)) {
+                            map.setView(currentPoint, map.getZoom(), { animate: true });
+                        }
+
+                        index++;
+                        setTimeout(animate, 100);
+                    }
+                }
+
+                animate();
+            })
+            .catch(error => console.error('Error loading KML file:', error));
+
+        // Load and add bus stop markers from CSV
+        fetch('Kawe-Gerezani.csv')
+            .then(response => response.text())
+            .then(csvData => {
+                const stops = Papa.parse(csvData, { header: true }).data;
+                stops.forEach((stop, i) => {
+                    const lat = parseFloat(stop.lat);
+                    const lng = parseFloat(stop.lon);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        busStops.push([lat, lng]);
+                        const marker = L.marker([lat, lng]).addTo(map);
+
+                        setTimeout(() => {
+                            marker.bindPopup(`Stop: ${stop.StopName || 'Unnamed'}`).openPopup();
+                        }, i * 1000); // Stagger by 1 second per stop
+                    }
+                });
+            })
+            .catch(error => console.error('Error loading CSV file:', error));
+
+        // Calculate distance between two points
+        function getDistance(point1, point2) {
+            const [lat1, lon1] = point1;
+            const [lat2, lon2] = point2;
+            const R = 6371e3; // Earth's radius in meters
+            const φ1 = (lat1 * Math.PI) / 180;
+            const φ2 = (lat2 * Math.PI) / 180;
+            const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+            const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        // Find the closest bus stop to a given point
+        function findClosestBusStop(point) {
+            let closestStop = null;
+            let minDistance = Infinity;
+            busStops.forEach(stop => {
+                const distance = getDistance(point, stop);
+                if (distance < minDistance) {
+                    closestStop = stop;
+                    minDistance = distance;
+                }
+            });
+            return closestStop;
+        }
+
+        // Handle Visualize button click
+        document.getElementById('visualize').addEventListener('click', () => {
+            const fromInput = document.getElementById('from').value.split(',').map(Number);
+            const toInput = document.getElementById('to').value.split(',').map(Number);
+
+            if (fromInput.length === 2 && toInput.length === 2) {
+                const fromPoint = [fromInput[0], fromInput[1]];
+                const toPoint = [toInput[0], toInput[1]];
+
+                // Add markers for From and To points with distinct colors
+                const fromMarker = L.marker(fromPoint, { icon: L.icon({ iconUrl: 'red-marker-icon.png', iconSize: [25, 41] }) })
+                    .addTo(map)
+                    .bindPopup('From')
+                    .openPopup();
+                const toMarker = L.marker(toPoint, { icon: L.icon({ iconUrl: 'green-marker-icon.png', iconSize: [25, 41] }) })
+                    .addTo(map)
+                    .bindPopup('To');
+
+                // Find closest bus stops
+                const fromClosest = findClosestBusStop(fromPoint);
+                const toClosest = findClosestBusStop(toPoint);
+
+                // Draw paths to the closest bus stops
+                if (fromClosest) {
+                    L.polyline([fromPoint, fromClosest], { color: 'orange', dashArray: '4, 6' }).addTo(map);
+                }
+                if (toClosest) {
+                    L.polyline([toClosest, toPoint], { color: 'orange', dashArray: '4, 6' }).addTo(map);
+                }
+
+                // Adjust the map view
+                const bounds = L.latLngBounds([fromPoint, toPoint, fromClosest, toClosest]);
+                map.fitBounds(bounds);
+            } else {
+                alert('Please enter valid coordinates for From and To.');
+            }
+        });
+    </script>
+</body>
+</html>

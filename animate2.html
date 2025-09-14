@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bus Route Visualization</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-omnivore/0.3.4/leaflet-omnivore.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <style>
+        #map { height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([-6.8, 39.25], 12);
+    
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+    
+        // Function to animate the path
+        function animatePath(coords, map) {
+            const animatedLine = L.polyline([], { color: 'blue', weight: 4 }).addTo(map);
+            let index = 0;
+    
+            function addPoint() {
+                if (index < coords.length) {
+                    animatedLine.addLatLng(coords[index]);
+                    index++;
+                    setTimeout(addPoint, 100); // Adjust for animation speed
+                }
+            }
+    
+            addPoint();
+        }
+    
+        // Load the KML route and animate it
+        fetch('Bus Route Paths.kml')
+            .then(response => response.text())
+            .then(kmlText => {
+                const parser = new DOMParser();
+                const kml = parser.parseFromString(kmlText, 'application/xml');
+                const coordinates = [...kml.querySelectorAll('coordinates')];
+    
+                // Extract and parse the coordinates for the route
+                const routeCoords = coordinates.map(coord => {
+                    const [lng, lat] = coord.textContent.trim().split(',').map(parseFloat);
+                    return [lat, lng];
+                });
+    
+                // Animate the route path
+                animatePath(routeCoords, map);
+                map.fitBounds(L.polyline(routeCoords).getBounds());
+            })
+            .catch(error => console.error("Error loading KML file:", error));
+    
+        // Load the stops from the CSV and display them sequentially
+        fetch('Kawe-Gerezani.csv')
+            .then(response => response.text())
+            .then(csvData => {
+                const stops = Papa.parse(csvData, { header: true }).data;
+    
+                // Show stops sequentially with popups
+                stops.forEach((stop, index) => {
+                    const lat = parseFloat(stop.lat);
+                    const lon = parseFloat(stop.lon);
+    
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        setTimeout(() => {
+                            const stopMarker = L.marker([lat, lon]).addTo(map);
+                            stopMarker.bindPopup(stop.StopName).openPopup();
+                        }, index * 2000); // Delay based on the stop order (2 seconds intervals)
+                    }
+                });
+            })
+            .catch(error => console.error("Error loading CSV file:", error));
+    </script>
+    
+</body>
+</html>
+
+
+

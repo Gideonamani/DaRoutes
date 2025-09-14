@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Animate KML Path with Bus Stops</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-kml@0.1.0/leaflet-kml.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <style>
+        #map { height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([-6.8, 39.25], 12);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Load the KML file
+        fetch('Bus Route Paths.kml')
+            .then(response => response.text())
+            .then(kmlText => {
+                const parser = new DOMParser();
+                const kml = parser.parseFromString(kmlText, 'text/xml');
+
+                // Extract coordinates from KML
+                const placemarks = kml.getElementsByTagName('Placemark');
+                const coordinates = [];
+                for (let i = 0; i < placemarks.length; i++) {
+                    const coordsText = placemarks[i].getElementsByTagName('coordinates')[0].textContent.trim();
+                    coordsText.split(' ').forEach(coordPair => {
+                        const [lng, lat] = coordPair.split(',').map(Number);
+                        coordinates.push([lat, lng]);
+                    });
+                }
+
+                // Animate the path
+                const animatedPolyline = L.polyline([], { color: 'blue', weight: 5 }).addTo(map);
+                let index = 0;
+
+                function animate() {
+                    if (index < coordinates.length) {
+                        animatedPolyline.addLatLng(coordinates[index]);
+
+                        // Smoothly adjust the zoom and center
+                        const currentBounds = animatedPolyline.getBounds();
+                        map.flyToBounds(currentBounds, { duration: 0.8 }); // Slower fly-to transition
+
+                        index++;
+                        setTimeout(animate, 100); // Slower animation speed
+                    }
+                }
+
+                animate();
+            })
+            .catch(error => console.error('Error loading KML file:', error));
+
+        // Load and add bus stop markers from CSV
+        fetch('Kawe-Gerezani.csv')
+            .then(response => response.text())
+            .then(csvData => {
+                const stops = Papa.parse(csvData, { header: true }).data;
+                stops.forEach((stop, i) => {
+                    const lat = parseFloat(stop.lat);
+                    const lng = parseFloat(stop.lon);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        setTimeout(() => {
+                            L.marker([lat, lng])
+                                .addTo(map)
+                                .bindPopup(`Stop ${i + 1}: ${stop.StopName || 'Unnamed'}`)
+                                .openPopup();
+                        }, i * 1000); // Stagger bus stop marker appearance
+                    }
+                });
+            })
+            .catch(error => console.error('Error loading CSV file:', error));
+
+        // Haversine formula to calculate the distance between two points
+        function haversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Earth radius in meters
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c; // Distance in meters
+        }
+
+        // Function to find the closest stop
+        function findClosestStop(lat, lon, stops) {
+            let closestStop = null;
+            let minDistance = Infinity;
+
+            stops.forEach(stop => {
+                const distance = haversineDistance(lat, lon, parseFloat(stop.lat), parseFloat(stop.lon));
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestStop = stop;
+                }
+            });
+
+            return closestStop;
+        }
+
+        // Example usage: -6.717856, 39.227893
+        const userLocation = { lat: -6.717856, lon: 39.227893 }; // Replace with the user's actual location
+
+        fetch('Kawe-Gerezani.csv')
+            .then(response => response.text())
+            .then(csvData => {
+                const stops = Papa.parse(csvData, { header: true }).data;
+                const closestStop = findClosestStop(userLocation.lat, userLocation.lon, stops);
+                console.log('Closest Stop:', closestStop);
+
+                // Add the closest stop marker to the map
+                if (closestStop) {
+                    L.marker([parseFloat(closestStop.lat), parseFloat(closestStop.lon)])
+                        .addTo(map)
+                        .bindPopup(`Closest Stop: ${closestStop.StopName}`)
+                        .openPopup();
+                }
+            })
+            .catch(error => console.error('Error loading CSV file:', error));
+    </script>
+</body>
+</html>
