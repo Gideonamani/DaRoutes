@@ -34,13 +34,13 @@ export function wireControls(map: L.Map, stopCoords: LatLon[], routePolyline: La
     activeField = 'to';
     setCursorPicking(true);
   });
-  fromInput?.addEventListener('blur', () => {
-    activeField = null;
-    setCursorPicking(false);
-  });
-  toInput?.addEventListener('blur', () => {
-    activeField = null;
-    setCursorPicking(false);
+  // Allow blur without canceling pick; user can click the map next
+  // Provide ESC to cancel instead
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') {
+      activeField = null;
+      setCursorPicking(false);
+    }
   });
 
   // Clicking on map fills the focused input and drops a draggable marker
@@ -75,6 +75,10 @@ export function wireControls(map: L.Map, stopCoords: LatLon[], routePolyline: La
         });
       }
     }
+
+    // After a successful pick, stop picking mode until user focuses an input again
+    activeField = null;
+    setCursorPicking(false);
   });
 
   visualizeBtn?.addEventListener('click', () => {
