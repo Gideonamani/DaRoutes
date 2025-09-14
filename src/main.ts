@@ -18,11 +18,35 @@ async function bootstrap() {
     }).addTo(map);
 
     // Render stops
+    const controlAPIPlaceholder: { setPoint?: (which: 'from'|'to', coord: [number, number]) => void } = {};
     const stopLayer = L.geoJSON(stops as any, {
       pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 5, color: '#cc0000' }),
-      onEachFeature: (feature, layer) => {
+      onEachFeature: (feature, layer: any) => {
         const name = feature?.properties?.name ?? 'Stop';
-        layer.bindPopup(`<div class="stop-popup">${name}</div>`);
+        const coords = feature?.geometry?.coordinates as [number, number];
+        const coordLatLon: [number, number] = [coords[1], coords[0]];
+        const popupHtml = `<div class="stop-popup"><strong>${name}</strong><div style="margin-top:6px;display:flex;gap:6px;">`+
+          `<button class="btn mini" data-role="set-from">Set as From</button>`+
+          `<button class="btn mini" data-role="set-to">Set as To</button>`+
+          `</div></div>`;
+        layer.bindPopup(popupHtml);
+        layer.on('click', () => {
+          const activeId = (document.activeElement && (document.activeElement as HTMLElement).id) || '';
+          if (activeId === 'from' && controlAPIPlaceholder.setPoint) {
+            controlAPIPlaceholder.setPoint('from', coordLatLon);
+          } else if (activeId === 'to' && controlAPIPlaceholder.setPoint) {
+            controlAPIPlaceholder.setPoint('to', coordLatLon);
+          } else if (layer.openPopup) {
+            layer.openPopup();
+          }
+        });
+        layer.on('popupopen', (e: any) => {
+          const container = e.popup.getElement() as HTMLElement;
+          const fromBtn = container.querySelector('[data-role="set-from"]') as HTMLButtonElement | null;
+          const toBtn = container.querySelector('[data-role="set-to"]') as HTMLButtonElement | null;
+          fromBtn?.addEventListener('click', () => controlAPIPlaceholder.setPoint && controlAPIPlaceholder.setPoint('from', coordLatLon));
+          toBtn?.addEventListener('click', () => controlAPIPlaceholder.setPoint && controlAPIPlaceholder.setPoint('to', coordLatLon));
+        });
       },
     }).addTo(map);
 
@@ -44,7 +68,8 @@ async function bootstrap() {
 
     const routePolyline = extractRoutePolylineFromGeoJSON(routes);
 
-    wireControls(map, stopsList, routePolyline);
+    const controlsAPI = wireControls(map, stopsList, routePolyline);
+    controlAPIPlaceholder.setPoint = controlsAPI.setPoint;
   } catch (err) {
     console.error('Error initializing app:', err);
   }

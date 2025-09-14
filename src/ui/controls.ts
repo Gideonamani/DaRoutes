@@ -54,14 +54,10 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
     }
   });
 
-  // Clicking on map fills the focused input and drops a draggable marker
-  map.on('click', (e: L.LeafletMouseEvent) => {
-    if (!activeField) return;
-    const lat = +e.latlng.lat.toFixed(6);
-    const lng = +e.latlng.lng.toFixed(6);
-    const text = `${lat}, ${lng}`;
-
-    if (activeField === 'from' && fromInput) {
+  function setPoint(which: 'from'|'to', coord: LatLon) {
+    const [lat, lng] = coord;
+    const text = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    if (which === 'from' && fromInput) {
       fromInput.value = text;
       if (fromMarker) {
         fromMarker.setLatLng([lat, lng]);
@@ -73,8 +69,7 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
         });
       }
     }
-
-    if (activeField === 'to' && toInput) {
+    if (which === 'to' && toInput) {
       toInput.value = text;
       if (toMarker) {
         toMarker.setLatLng([lat, lng]);
@@ -86,6 +81,14 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
         });
       }
     }
+  }
+
+  // Clicking on map fills the focused input and drops a draggable marker
+  map.on('click', (e: L.LeafletMouseEvent) => {
+    if (!activeField) return;
+    const lat = +e.latlng.lat.toFixed(6);
+    const lng = +e.latlng.lng.toFixed(6);
+    setPoint(activeField, [lat, lng]);
 
     // After a successful pick, stop picking mode until user focuses an input again
     activeField = null;
@@ -135,11 +138,15 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
 
     if (summary) summary.textContent = mode === 'walking' ? 'Finding walking paths…' : 'Drawing access paths…';
 
-    // Draw access walking path (from -> board stop), with fallback to straight dashed line
+    // Draw access path (from -> board stop)
     if (fromClosest) {
-      const walk1 = await getWalkingRouteOSRM(from, fromClosest.coord);
-      if (walk1 && walk1.length > 1) {
-        L.polyline(walk1, { color: '#f39c12', weight: 4, opacity: 0.9 }).addTo(layer);
+      if (mode === 'walking') {
+        const walk1 = await getWalkingRouteOSRM(from, fromClosest.coord);
+        if (walk1 && walk1.length > 1) {
+          L.polyline(walk1, { color: '#f39c12', weight: 4, opacity: 0.9 }).addTo(layer);
+        } else {
+          L.polyline([from, fromClosest.coord], { color: '#f39c12', dashArray: '4,6' }).addTo(layer);
+        }
       } else {
         L.polyline([from, fromClosest.coord], { color: '#f39c12', dashArray: '4,6' }).addTo(layer);
       }
@@ -147,11 +154,15 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
       boardMarker.bindPopup(`Board: ${stops[fromClosest.index]?.name ?? 'Stop'}`);
     }
 
-    // Draw egress walking path (alight stop -> to), with fallback
+    // Draw egress path (alight stop -> to)
     if (toClosest) {
-      const walk2 = await getWalkingRouteOSRM(toClosest.coord, to);
-      if (walk2 && walk2.length > 1) {
-        L.polyline(walk2, { color: '#8e44ad', weight: 4, opacity: 0.9 }).addTo(layer);
+      if (mode === 'walking') {
+        const walk2 = await getWalkingRouteOSRM(toClosest.coord, to);
+        if (walk2 && walk2.length > 1) {
+          L.polyline(walk2, { color: '#8e44ad', weight: 4, opacity: 0.9 }).addTo(layer);
+        } else {
+          L.polyline([toClosest.coord, to], { color: '#8e44ad', dashArray: '4,6' }).addTo(layer);
+        }
       } else {
         L.polyline([toClosest.coord, to], { color: '#8e44ad', dashArray: '4,6' }).addTo(layer);
       }
@@ -189,4 +200,9 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
     map.fitBounds(bounds, { padding: [40, 40] });
     if (spinner) spinner.classList.add('hidden');
   });
+
+  // Expose a tiny API for picking stops via marker clicks
+  return {
+    setPoint,
+  } as const;
 }
