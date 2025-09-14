@@ -2,6 +2,7 @@ import L from 'leaflet';
 import { findClosest, LatLon } from '../logic/snap';
 import { nearestOnPolyline, slicePolylineByDistance } from '../logic/route';
 import { haversine } from '../logic/distance';
+import { getWalkingRouteOSRM } from '../logic/routing';
 
 type StopItem = { coord: LatLon; name: string };
 
@@ -105,7 +106,7 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
     clearAll();
   });
 
-  visualizeBtn?.addEventListener('click', () => {
+  visualizeBtn?.addEventListener('click', async () => {
     layer.clearLayers();
 
     const from = fromInput ? parseLatLon(fromInput.value) : null;
@@ -122,13 +123,28 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
     L.marker(from).addTo(layer).bindPopup('From');
     L.marker(to).addTo(layer).bindPopup('To');
 
+    if (summary) summary.textContent = 'Finding walking paths…';
+
+    // Draw access walking path (from -> board stop), with fallback to straight dashed line
     if (fromClosest) {
-      L.polyline([from, fromClosest.coord], { color: 'orange', dashArray: '4,6' }).addTo(layer);
+      const walk1 = await getWalkingRouteOSRM(from, fromClosest.coord);
+      if (walk1 && walk1.length > 1) {
+        L.polyline(walk1, { color: '#f39c12', weight: 4, opacity: 0.9 }).addTo(layer);
+      } else {
+        L.polyline([from, fromClosest.coord], { color: '#f39c12', dashArray: '4,6' }).addTo(layer);
+      }
       boardMarker = L.circleMarker(fromClosest.coord, { radius: 7, color: '#2e7d32', fillColor: '#2e7d32', fillOpacity: 0.9 }).addTo(layer);
       boardMarker.bindPopup(`Board: ${stops[fromClosest.index]?.name ?? 'Stop'}`);
     }
+
+    // Draw egress walking path (alight stop -> to), with fallback
     if (toClosest) {
-      L.polyline([toClosest.coord, to], { color: 'orange', dashArray: '4,6' }).addTo(layer);
+      const walk2 = await getWalkingRouteOSRM(toClosest.coord, to);
+      if (walk2 && walk2.length > 1) {
+        L.polyline(walk2, { color: '#8e44ad', weight: 4, opacity: 0.9 }).addTo(layer);
+      } else {
+        L.polyline([toClosest.coord, to], { color: '#8e44ad', dashArray: '4,6' }).addTo(layer);
+      }
       alightMarker = L.circleMarker(toClosest.coord, { radius: 7, color: '#6a1b9a', fillColor: '#6a1b9a', fillOpacity: 0.9 }).addTo(layer);
       alightMarker.bindPopup(`Alight: ${stops[toClosest.index]?.name ?? 'Stop'}`);
     }
