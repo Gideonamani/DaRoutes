@@ -15,6 +15,8 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
   const nearestMode = document.getElementById('nearest-mode') as HTMLSelectElement | null;
   const summary = document.getElementById('summary') as HTMLDivElement | null;
   const spinner = document.getElementById('spinner') as HTMLSpanElement | null;
+  const playToggle = document.getElementById('play-toggle') as HTMLButtonElement | null;
+  const speedInput = document.getElementById('speed') as HTMLInputElement | null;
 
   const layer = L.layerGroup().addTo(map); // results layer
   const pickLayer = L.layerGroup().addTo(map); // picker markers
@@ -24,6 +26,17 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
   let toMarker: L.Marker | null = null;
   let boardMarker: L.CircleMarker | null = null;
   let alightMarker: L.CircleMarker | null = null;
+
+  // Animation state
+  let busMarker: L.Marker | null = null;
+  let segmentPoints: LatLon[] = [];
+  let segmentCum: number[] = [];
+  let totalLen = 0; // meters
+  let progress = 0; // meters along
+  let playing = false;
+  let rafId: number | null = null;
+  let lastTs = 0;
+  const busIcon = L.divIcon({ className: 'bus-icon', html: '🚌', iconSize: [28, 28], iconAnchor: [14, 14] });
 
   function parseLatLon(value: string): LatLon | null {
     const parts = value.split(',').map((n) => Number(n.trim()));
@@ -102,6 +115,13 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
     toMarker = null;
     boardMarker = null;
     alightMarker = null;
+    stopAnimation();
+    busMarker = null;
+    segmentPoints = [];
+    segmentCum = [];
+    totalLen = 0;
+    progress = 0;
+    if (playToggle) { playToggle.disabled = true; playToggle.textContent = '▶ Play'; }
     if (fromInput) fromInput.value = '';
     if (toInput) toInput.value = '';
     if (summary) summary.textContent = '';
@@ -112,8 +132,72 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
     clearAll();
   });
 
+  function stopAnimation() {
+    playing = false;
+    if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
+    lastTs = 0;
+    if (playToggle) playToggle.textContent = '▶ Play';
+  }
+
+  function pointAtDistance(poly: LatLon[], cum: number[], dist: number): LatLon {
+    if (poly.length === 0) return [0, 0];
+    if (dist <= 0) return poly[0];
+    const total = cum[cum.length - 1] ?? 0;
+    if (dist >= total) return poly[poly.length - 1];
+    // binary search for segment
+    let lo = 0, hi = cum.length - 1;
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (cum[mid] < dist) lo = mid + 1; else hi = mid;
+    }
+    const i = Math.max(1, lo);
+    const segStart = cum[i - 1];
+    const segEnd = cum[i];
+    const t = segEnd === segStart ? 0 : (dist - segStart) / (segEnd - segStart);
+    const a = poly[i - 1];
+    const b = poly[i];
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  }
+
+  function startAnimation() {
+    if (!segmentPoints.length || totalLen <= 0) return;
+    if (!busMarker) {
+      busMarker = L.marker(segmentPoints[0], { icon: busIcon }).addTo(layer);
+    }
+    playing = true;
+    if (playToggle) playToggle.textContent = '⏸ Pause';
+    lastTs = 0;
+    const step = (ts: number) => {
+      if (!playing) return;
+      if (lastTs === 0) lastTs = ts;
+      const dt = (ts - lastTs) / 1000; // seconds
+      lastTs = ts;
+      const speed = speedInput ? Number(speedInput.value) : 10; // m/s
+      progress += Math.max(0, speed) * dt;
+      if (progress >= totalLen) {
+        progress = totalLen;
+        const pos = pointAtDistance(segmentPoints, segmentCum, progress);
+        busMarker!.setLatLng(pos);
+        stopAnimation();
+        if (playToggle) playToggle.textContent = '↺ Replay';
+        return;
+      }
+      const pos = pointAtDistance(segmentPoints, segmentCum, progress);
+      busMarker!.setLatLng(pos);
+      rafId = requestAnimationFrame(step);
+    };
+    rafId = requestAnimationFrame(step);
+  }
+
   visualizeBtn?.addEventListener('click', async () => {
     layer.clearLayers();
+    stopAnimation();
+    busMarker = null;
+    segmentPoints = [];
+    segmentCum = [];
+    totalLen = 0;
+    progress = 0;
+    if (playToggle) { playToggle.disabled = true; playToggle.textContent = '▶ Play'; }
 
     const from = fromInput ? parseLatLon(fromInput.value) : null;
     const to = toInput ? parseLatLon(toInput.value) : null;
@@ -187,6 +271,22 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
           const bKm = (busMeters / 1000).toFixed(2);
           const eKm = egressMeters != null ? (egressMeters / 1000).toFixed(2) : '—';
           if (summary) summary.textContent = `Board at ${boardName} → Alight at ${alightName} • Walk ~${aKm} km + Bus ~${bKm} km + Walk ~${eKm} km`;
+
+          // Prepare animation
+          segmentPoints = segment;
+          // build cumulative distances
+          segmentCum = [0];
+          for (let i = 1; i < segmentPoints.length; i++) {
+            segmentCum[i] = segmentCum[i - 1] + haversine(segmentPoints[i - 1], segmentPoints[i]);
+          }
+          totalLen = segmentCum[segmentCum.length - 1] ?? 0;
+          progress = 0;
+          if (!busMarker) {
+            busMarker = L.marker(segmentPoints[0], { icon: busIcon }).addTo(layer);
+          } else {
+            busMarker.setLatLng(segmentPoints[0]);
+          }
+          if (playToggle) { playToggle.disabled = totalLen <= 0; playToggle.textContent = '▶ Play'; }
         }
       }
     }
@@ -199,6 +299,21 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
     ]);
     map.fitBounds(bounds, { padding: [40, 40] });
     if (spinner) spinner.classList.add('hidden');
+  });
+
+  // Play/Pause/Replay toggle
+  playToggle?.addEventListener('click', () => {
+    if (!segmentPoints.length || totalLen <= 0) return;
+    if (!playing && progress >= totalLen) {
+      // replay from start
+      progress = 0;
+      if (busMarker) busMarker.setLatLng(segmentPoints[0]);
+    }
+    if (playing) {
+      stopAnimation();
+    } else {
+      startAnimation();
+    }
   });
 
   // Expose a tiny API for picking stops via marker clicks

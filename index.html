@@ -13,12 +13,16 @@
           <label>To <input id="to" placeholder="Click map or type: -6.81, 39.27" size="18" /></label>
           <label>Nearest by
             <select id="nearest-mode">
-              <option value="walking" selected>Walking</option>
-              <option value="straight">Straight-line</option>
+              <option value="walking">Walking</option>
+              <option value="straight" selected>Straight-line</option>
             </select>
           </label>
           <button id="visualize" class="btn primary">Visualize</button>
           <span id="spinner" class="spinner hidden" aria-hidden="true"></span>
+          <button id="play-toggle" class="btn" disabled>▶ Play</button>
+          <label>Speed
+            <input id="speed" type="range" min="2" max="20" step="1" value="10" />
+          </label>
           <button id="clear" class="btn">Clear</button>
         </div>
         <div id="summary" class="summary" aria-live="polite"></div>
