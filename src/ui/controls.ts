@@ -1,5 +1,5 @@
 import L from 'leaflet';
-import { LatLon } from '../logic/snap';
+import { LatLon, findClosest } from '../logic/snap';
 import { nearestOnPolyline, slicePolylineByDistance } from '../logic/route';
 import { haversine } from '../logic/distance';
 import { getWalkingRouteOSRM, findClosestStopByWalking } from '../logic/routing';
@@ -12,7 +12,9 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
   const toInput = document.getElementById('to') as HTMLInputElement | null;
   const visualizeBtn = document.getElementById('visualize') as HTMLButtonElement | null;
   const clearBtn = document.getElementById('clear') as HTMLButtonElement | null;
+  const nearestMode = document.getElementById('nearest-mode') as HTMLSelectElement | null;
   const summary = document.getElementById('summary') as HTMLDivElement | null;
+  const spinner = document.getElementById('spinner') as HTMLSpanElement | null;
 
   const layer = L.layerGroup().addTo(map); // results layer
   const pickLayer = L.layerGroup().addTo(map); // picker markers
@@ -100,6 +102,7 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
     if (fromInput) fromInput.value = '';
     if (toInput) toInput.value = '';
     if (summary) summary.textContent = '';
+    if (spinner) spinner.classList.add('hidden');
   }
 
   clearBtn?.addEventListener('click', () => {
@@ -116,14 +119,21 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
       return;
     }
 
-    const fromClosest = await findClosestStopByWalking(from, stopCoords, 6);
-    const toClosest = await findClosestStopByWalking(to, stopCoords, 6);
+    // Mode: walking vs straight-line
+    const mode = nearestMode?.value === 'straight' ? 'straight' : 'walking';
+    if (spinner) spinner.classList.remove('hidden');
+    const fromClosest = mode === 'walking'
+      ? await findClosestStopByWalking(from, stopCoords, 6)
+      : (() => { const r = findClosest(from, stopCoords); return r && { index: r.index, coord: r.coord, distanceMeters: null as number | null }; })();
+    const toClosest = mode === 'walking'
+      ? await findClosestStopByWalking(to, stopCoords, 6)
+      : (() => { const r = findClosest(to, stopCoords); return r && { index: r.index, coord: r.coord, distanceMeters: null as number | null }; })();
 
     // Markers
     L.marker(from).addTo(layer).bindPopup('From');
     L.marker(to).addTo(layer).bindPopup('To');
 
-    if (summary) summary.textContent = 'Finding walking paths…';
+    if (summary) summary.textContent = mode === 'walking' ? 'Finding walking paths…' : 'Drawing access paths…';
 
     // Draw access walking path (from -> board stop), with fallback to straight dashed line
     if (fromClosest) {
@@ -157,10 +167,15 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
         const segment = slicePolylineByDistance(routePolyline, a.routeDist, b.routeDist);
         if (segment.length > 1) {
           L.polyline(segment, { color: '#2c7fb8', weight: 5 }).addTo(layer);
-          const distanceMeters = Math.abs(b.routeDist - a.routeDist);
+          const busMeters = Math.abs(b.routeDist - a.routeDist);
           const boardName = stops[fromClosest.index]?.name ?? 'Stop';
           const alightName = stops[toClosest.index]?.name ?? 'Stop';
-          if (summary) summary.textContent = `Board at ${boardName} → Alight at ${alightName} • ~${(distanceMeters/1000).toFixed(2)} km`;
+          const accessMeters = mode === 'walking' ? (fromClosest as any).distanceMeters ?? undefined : haversine(from, fromClosest.coord);
+          const egressMeters = mode === 'walking' ? (toClosest as any).distanceMeters ?? undefined : haversine(toClosest.coord, to);
+          const aKm = accessMeters != null ? (accessMeters / 1000).toFixed(2) : '—';
+          const bKm = (busMeters / 1000).toFixed(2);
+          const eKm = egressMeters != null ? (egressMeters / 1000).toFixed(2) : '—';
+          if (summary) summary.textContent = `Board at ${boardName} → Alight at ${alightName} • Walk ~${aKm} km + Bus ~${bKm} km + Walk ~${eKm} km`;
         }
       }
     }
@@ -172,5 +187,6 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
       ...(toClosest ? [L.latLng(toClosest.coord[0], toClosest.coord[1])] : []),
     ]);
     map.fitBounds(bounds, { padding: [40, 40] });
+    if (spinner) spinner.classList.add('hidden');
   });
 }

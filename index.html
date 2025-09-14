@@ -11,7 +11,14 @@
         <div class="row">
           <label>From <input id="from" placeholder="Click map or type: -6.8, 39.25" size="18" /></label>
           <label>To <input id="to" placeholder="Click map or type: -6.81, 39.27" size="18" /></label>
+          <label>Nearest by
+            <select id="nearest-mode">
+              <option value="walking" selected>Walking</option>
+              <option value="straight">Straight-line</option>
+            </select>
+          </label>
           <button id="visualize" class="btn primary">Visualize</button>
+          <span id="spinner" class="spinner hidden" aria-hidden="true"></span>
           <button id="clear" class="btn">Clear</button>
         </div>
         <div id="summary" class="summary" aria-live="polite"></div>
