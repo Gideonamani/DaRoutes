@@ -19,6 +19,7 @@
   align-items: center;
   gap: 10px;
 }
+.top-controls .row-actions { margin-top: 6px; }
 .top-controls label {
   display: flex;
   align-items: center;
