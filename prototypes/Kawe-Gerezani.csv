@@ -1,0 +1,27 @@
+type,id,lat,lon,tags/amenity,tags/bus,tags/highway,StopName
+node,,-6.735882,39.222375,bus_station,yes,bus_stop,Ukwamani
+node,,-6.736257,39.224341,bus_station,yes,bus_stop,Oilcom
+node,,-6.737538,39.227046,bus_station,yes,bus_stop,Kanisani
+node,,-6.739053,39.229468,bus_station,yes,bus_stop,Kawe
+node,,-6.740646,39.232048,bus_station,yes,bus_stop,Msikitini
+node,,-6.741198,39.235626,bus_station,yes,bus_stop,Maringo
+node,,-6.745560,39.239146,bus_station,yes,bus_stop,JKT
+node,,-6.749885,39.241617,bus_station,yes,bus_stop,Clouds
+node,,-6.752828,39.243865,bus_station,yes,bus_stop,Mikocheni 'B'
+node,,-6.755873,39.247076,bus_station,yes,bus_stop,Warioba
+node,,-6.760492,39.252337,bus_station,yes,bus_stop,Kwa Mwalimu Nyerere
+node,,-6.766052,39.260126,bus_station,yes,bus_stop,Chama
+node,,-6.769640,39.263648,bus_station,yes,bus_stop,Kisiwani
+node,,-6.771311,39.264183,bus_station,yes,bus_stop,Ubalozi
+node,,-6.777646,39.263990,bus_station,yes,bus_stop,Morocco
+node,,-6.782222,39.263833,bus_station,yes,bus_stop,Biafra/Kanisani
+node,,-6.786000,39.263706,bus_station,yes,bus_stop,Kinondoni 'B'
+node,,-6.789518,39.263693,bus_station,yes,bus_stop,Manyanya
+node,,-6.793270,39.264531,bus_station,yes,bus_stop,Studio
+node,,-6.795898,39.264213,bus_station,yes,bus_stop,Mkwajuni
+node,,-6.805105,39.259078,bus_station,yes,bus_stop,Kanisani
+node,,-6.808171,39.260471,bus_station,yes,bus_stop,Magomeni Mapipa
+node,,-6.811073,39.268544,bus_station,yes,bus_stop,Jangwani
+node,,-6.813199,39.274676,bus_station,yes,bus_stop,Fire
+node,,-6.814086,39.275835,bus_station,yes,bus_stop,Bakhresa
+node,,-6.815438,39.273891,bus_station,yes,bus_stop,Gerezani
