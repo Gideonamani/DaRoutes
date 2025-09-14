@@ -20,3 +20,57 @@ export async function getWalkingRouteOSRM(from: LatLon, to: LatLon): Promise<Lat
   }
 }
 
+export async function getWalkingDistanceOSRM(from: LatLon, to: LatLon): Promise<number | null> {
+  const [flat, flon] = from;
+  const [tlat, tlon] = to;
+  const url = `https://router.project-osrm.org/route/v1/foot/${flon},${flat};${tlon},${tlat}?overview=false&alternatives=false&steps=false`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const meters: number | undefined = data?.routes?.[0]?.distance;
+    return typeof meters === 'number' ? meters : null;
+  } catch {
+    return null;
+  }
+}
+
+const walkCache = new Map<string, number>();
+
+export async function findClosestStopByWalking(point: LatLon, stops: LatLon[], k = 5): Promise<{ index: number; coord: LatLon; distanceMeters: number } | null> {
+  if (!stops.length) return null;
+  const candidates = stops
+    .map((c, i) => ({ i, c }))
+    .sort((a, b) => {
+      // initial prune by straight-line distance to limit API calls
+      const da = Math.hypot(point[0] - a.c[0], point[1] - a.c[1]);
+      const db = Math.hypot(point[0] - b.c[0], point[1] - b.c[1]);
+      return da - db;
+    })
+    .slice(0, Math.min(k, stops.length));
+
+  let best: { index: number; coord: LatLon; distanceMeters: number } | null = null;
+  for (const cand of candidates) {
+    const key = `${point[0].toFixed(5)},${point[1].toFixed(5)}->${cand.i}`;
+    let dist = walkCache.get(key) ?? null;
+    if (dist == null) {
+      dist = await getWalkingDistanceOSRM(point, cand.c);
+      if (dist != null) walkCache.set(key, dist);
+    }
+    if (dist == null) continue;
+    if (!best || dist < best.distanceMeters) best = { index: cand.i, coord: cand.c, distanceMeters: dist };
+  }
+
+  if (best) return best;
+  // Fallback to straight line nearest
+  let minI = 0;
+  let minD = Infinity;
+  stops.forEach((c, i) => {
+    const d = (point[0] - c[0]) ** 2 + (point[1] - c[1]) ** 2;
+    if (d < minD) {
+      minD = d;
+      minI = i;
+    }
+  });
+  return { index: minI, coord: stops[minI], distanceMeters: Math.sqrt(minD) };
+}

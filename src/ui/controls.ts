@@ -1,8 +1,8 @@
 import L from 'leaflet';
-import { findClosest, LatLon } from '../logic/snap';
+import { LatLon } from '../logic/snap';
 import { nearestOnPolyline, slicePolylineByDistance } from '../logic/route';
 import { haversine } from '../logic/distance';
-import { getWalkingRouteOSRM } from '../logic/routing';
+import { getWalkingRouteOSRM, findClosestStopByWalking } from '../logic/routing';
 
 type StopItem = { coord: LatLon; name: string };
 
@@ -116,8 +116,8 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
       return;
     }
 
-    const fromClosest = findClosest(from, stopCoords);
-    const toClosest = findClosest(to, stopCoords);
+    const fromClosest = await findClosestStopByWalking(from, stopCoords, 6);
+    const toClosest = await findClosestStopByWalking(to, stopCoords, 6);
 
     // Markers
     L.marker(from).addTo(layer).bindPopup('From');
