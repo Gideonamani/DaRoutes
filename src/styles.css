@@ -1,3 +1,51 @@
 #map { height: 100vh; }
 .stop-popup { font-family: system-ui, sans-serif; font-size: 13px; }
 
+.top-controls {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: saturate(140%) blur(4px);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  padding: 10px 12px;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+.top-controls .row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.top-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.top-controls input {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #d0d7de;
+  min-width: 220px;
+  font-size: 13px;
+}
+.btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #d0d7de;
+  background: #fff;
+  cursor: pointer;
+}
+.btn.primary {
+  background: #2c7fb8;
+  color: white;
+  border-color: #2c7fb8;
+}
+.summary {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #333;
+}

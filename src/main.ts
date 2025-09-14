@@ -32,14 +32,19 @@ async function bootstrap() {
       map.fitBounds(bounds);
     }
 
-    // Build a lightweight list of stop coords for snapping
-    const stopCoords = (stops.features || [])
-      .map((f: any) => (Array.isArray(f.geometry?.coordinates) ? [f.geometry.coordinates[1], f.geometry.coordinates[0]] : null))
-      .filter(Boolean) as [number, number][];
+    // Build a list of stops with coords and names
+    const stopsList = (stops.features || [])
+      .map((f: any) => {
+        if (!Array.isArray(f.geometry?.coordinates)) return null;
+        const [lon, lat] = f.geometry.coordinates;
+        const name = f?.properties?.name ?? 'Stop';
+        return { coord: [lat, lon] as [number, number], name };
+      })
+      .filter(Boolean) as { coord: [number, number]; name: string }[];
 
     const routePolyline = extractRoutePolylineFromGeoJSON(routes);
 
-    wireControls(map, stopCoords, routePolyline);
+    wireControls(map, stopsList, routePolyline);
   } catch (err) {
     console.error('Error initializing app:', err);
   }

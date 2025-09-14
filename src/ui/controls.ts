@@ -1,11 +1,17 @@
 import L from 'leaflet';
 import { findClosest, LatLon } from '../logic/snap';
 import { nearestOnPolyline, slicePolylineByDistance } from '../logic/route';
+import { haversine } from '../logic/distance';
 
-export function wireControls(map: L.Map, stopCoords: LatLon[], routePolyline: LatLon[]) {
+type StopItem = { coord: LatLon; name: string };
+
+export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLon[]) {
+  const stopCoords: LatLon[] = stops.map((s) => s.coord);
   const fromInput = document.getElementById('from') as HTMLInputElement | null;
   const toInput = document.getElementById('to') as HTMLInputElement | null;
   const visualizeBtn = document.getElementById('visualize') as HTMLButtonElement | null;
+  const clearBtn = document.getElementById('clear') as HTMLButtonElement | null;
+  const summary = document.getElementById('summary') as HTMLDivElement | null;
 
   const layer = L.layerGroup().addTo(map); // results layer
   const pickLayer = L.layerGroup().addTo(map); // picker markers
@@ -13,6 +19,8 @@ export function wireControls(map: L.Map, stopCoords: LatLon[], routePolyline: La
   let activeField: 'from' | 'to' | null = null;
   let fromMarker: L.Marker | null = null;
   let toMarker: L.Marker | null = null;
+  let boardMarker: L.CircleMarker | null = null;
+  let alightMarker: L.CircleMarker | null = null;
 
   function parseLatLon(value: string): LatLon | null {
     const parts = value.split(',').map((n) => Number(n.trim()));
@@ -81,6 +89,22 @@ export function wireControls(map: L.Map, stopCoords: LatLon[], routePolyline: La
     setCursorPicking(false);
   });
 
+  function clearAll() {
+    layer.clearLayers();
+    pickLayer.clearLayers();
+    fromMarker = null;
+    toMarker = null;
+    boardMarker = null;
+    alightMarker = null;
+    if (fromInput) fromInput.value = '';
+    if (toInput) toInput.value = '';
+    if (summary) summary.textContent = '';
+  }
+
+  clearBtn?.addEventListener('click', () => {
+    clearAll();
+  });
+
   visualizeBtn?.addEventListener('click', () => {
     layer.clearLayers();
 
@@ -100,9 +124,13 @@ export function wireControls(map: L.Map, stopCoords: LatLon[], routePolyline: La
 
     if (fromClosest) {
       L.polyline([from, fromClosest.coord], { color: 'orange', dashArray: '4,6' }).addTo(layer);
+      boardMarker = L.circleMarker(fromClosest.coord, { radius: 7, color: '#2e7d32', fillColor: '#2e7d32', fillOpacity: 0.9 }).addTo(layer);
+      boardMarker.bindPopup(`Board: ${stops[fromClosest.index]?.name ?? 'Stop'}`);
     }
     if (toClosest) {
       L.polyline([toClosest.coord, to], { color: 'orange', dashArray: '4,6' }).addTo(layer);
+      alightMarker = L.circleMarker(toClosest.coord, { radius: 7, color: '#6a1b9a', fillColor: '#6a1b9a', fillOpacity: 0.9 }).addTo(layer);
+      alightMarker.bindPopup(`Alight: ${stops[toClosest.index]?.name ?? 'Stop'}`);
     }
 
     // Route subpath between snapped stops (project both stops onto the route polyline)
@@ -113,6 +141,10 @@ export function wireControls(map: L.Map, stopCoords: LatLon[], routePolyline: La
         const segment = slicePolylineByDistance(routePolyline, a.routeDist, b.routeDist);
         if (segment.length > 1) {
           L.polyline(segment, { color: '#2c7fb8', weight: 5 }).addTo(layer);
+          const distanceMeters = Math.abs(b.routeDist - a.routeDist);
+          const boardName = stops[fromClosest.index]?.name ?? 'Stop';
+          const alightName = stops[toClosest.index]?.name ?? 'Stop';
+          if (summary) summary.textContent = `Board at ${boardName} → Alight at ${alightName} • ~${(distanceMeters/1000).toFixed(2)} km`;
         }
       }
     }
