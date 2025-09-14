@@ -20,12 +20,17 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
 
   const layer = L.layerGroup().addTo(map); // results layer
   const pickLayer = L.layerGroup().addTo(map); // picker markers
+  const decorLayer = L.layerGroup().addTo(map); // chevrons, labels, progress
 
   let activeField: 'from' | 'to' | null = null;
   let fromMarker: L.Marker | null = null;
   let toMarker: L.Marker | null = null;
   let boardMarker: L.CircleMarker | null = null;
   let alightMarker: L.CircleMarker | null = null;
+  let boardPulse: L.Marker | null = null;
+  let alightPulse: L.Marker | null = null;
+  let boardChip: L.Marker | null = null;
+  let alightChip: L.Marker | null = null;
 
   // Animation state
   let busMarker: L.Marker | null = null;
@@ -37,6 +42,11 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
   let rafId: number | null = null;
   let lastTs = 0;
   const busIcon = L.divIcon({ className: 'bus-icon', html: '🚌', iconSize: [28, 28], iconAnchor: [14, 14] });
+  const pulseGreen = L.divIcon({ className: 'pulse', html: '', iconSize: [12,12], iconAnchor: [6,6] });
+  const pulsePurple = L.divIcon({ className: 'pulse pulse-purple', html: '', iconSize: [12,12], iconAnchor: [6,6] });
+  const chip = (text: string) => L.divIcon({ className: 'chip', html: text, iconSize: [60,20], iconAnchor: [30, 22] });
+  let progressLine: L.Polyline | null = null;
+  let chevrons: L.Marker[] = [];
 
   function parseLatLon(value: string): LatLon | null {
     const parts = value.split(',').map((n) => Number(n.trim()));
@@ -111,10 +121,13 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
   function clearAll() {
     layer.clearLayers();
     pickLayer.clearLayers();
+    decorLayer.clearLayers();
     fromMarker = null;
     toMarker = null;
     boardMarker = null;
     alightMarker = null;
+    boardPulse = null; alightPulse = null;
+    boardChip = null; alightChip = null;
     stopAnimation();
     busMarker = null;
     segmentPoints = [];
@@ -234,8 +247,9 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
       } else {
         L.polyline([from, fromClosest.coord], { color: '#f39c12', dashArray: '4,6' }).addTo(layer);
       }
-      boardMarker = L.circleMarker(fromClosest.coord, { radius: 7, color: '#2e7d32', fillColor: '#2e7d32', fillOpacity: 0.9 }).addTo(layer);
-      boardMarker.bindPopup(`Board: ${stops[fromClosest.index]?.name ?? 'Stop'}`);
+      boardMarker = L.circleMarker(fromClosest.coord, { radius: 6, color: '#2e7d32', fillColor: '#2e7d32', fillOpacity: 1 }).addTo(layer);
+      boardPulse = L.marker(fromClosest.coord, { icon: pulseGreen }).addTo(decorLayer);
+      boardChip = L.marker(fromClosest.coord, { icon: chip(`Board: ${stops[fromClosest.index]?.name ?? 'Stop'}`) }).addTo(decorLayer);
     }
 
     // Draw egress path (alight stop -> to)
@@ -250,8 +264,9 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
       } else {
         L.polyline([toClosest.coord, to], { color: '#8e44ad', dashArray: '4,6' }).addTo(layer);
       }
-      alightMarker = L.circleMarker(toClosest.coord, { radius: 7, color: '#6a1b9a', fillColor: '#6a1b9a', fillOpacity: 0.9 }).addTo(layer);
-      alightMarker.bindPopup(`Alight: ${stops[toClosest.index]?.name ?? 'Stop'}`);
+      alightMarker = L.circleMarker(toClosest.coord, { radius: 6, color: '#6a1b9a', fillColor: '#6a1b9a', fillOpacity: 1 }).addTo(layer);
+      alightPulse = L.marker(toClosest.coord, { icon: pulsePurple }).addTo(decorLayer);
+      alightChip = L.marker(toClosest.coord, { icon: chip(`Alight: ${stops[toClosest.index]?.name ?? 'Stop'}`) }).addTo(decorLayer);
     }
 
     // Route subpath between snapped stops (project both stops onto the route polyline)
@@ -261,7 +276,10 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
       if (a && b) {
         const segment = slicePolylineByDistance(routePolyline, a.routeDist, b.routeDist);
         if (segment.length > 1) {
-          L.polyline(segment, { color: '#2c7fb8', weight: 5 }).addTo(layer);
+          // Base route
+          L.polyline(segment, { color: '#2c7fb8', weight: 4, opacity: 0.5 }).addTo(layer);
+          // Progress overlay
+          progressLine = L.polyline([segment[0]], { color: '#2c7fb8', weight: 6 }).addTo(decorLayer);
           const busMeters = Math.abs(b.routeDist - a.routeDist);
           const boardName = stops[fromClosest.index]?.name ?? 'Stop';
           const alightName = stops[toClosest.index]?.name ?? 'Stop';
@@ -287,6 +305,19 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
             busMarker.setLatLng(segmentPoints[0]);
           }
           if (playToggle) { playToggle.disabled = totalLen <= 0; playToggle.textContent = '▶ Play'; }
+
+          // Direction chevrons along the route
+          decorLayer.removeLayer as any; // noop keep TS happy
+          chevrons.forEach(m => decorLayer.removeLayer(m));
+          chevrons = [];
+          const step = Math.max(200, Math.floor(totalLen / 12));
+          for (let d = step; d < totalLen; d += step) {
+            const p = pointAtDistance(segmentPoints, segmentCum, d);
+            const pAhead = pointAtDistance(segmentPoints, segmentCum, Math.min(totalLen, d + 5));
+            const angle = Math.atan2(pAhead[0] - p[0], pAhead[1] - p[1]) * 180 / Math.PI; // deg
+            const icon = L.divIcon({ className: 'chevron', html: `<div style="transform: rotate(${ -angle }deg)">➤</div>`, iconSize: [14,14], iconAnchor: [7,7] });
+            chevrons.push(L.marker(p, { icon }).addTo(decorLayer));
+          }
         }
       }
     }
