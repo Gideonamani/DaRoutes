@@ -2,6 +2,7 @@ import L from 'leaflet';
 import { initMap } from './map/initMap';
 import { loadRoutes, loadStops } from './data/load';
 import { wireControls } from './ui/controls';
+import { extractRoutePolylineFromGeoJSON } from './logic/route';
 import './styles.css';
 
 async function bootstrap() {
@@ -36,11 +37,12 @@ async function bootstrap() {
       .map((f: any) => (Array.isArray(f.geometry?.coordinates) ? [f.geometry.coordinates[1], f.geometry.coordinates[0]] : null))
       .filter(Boolean) as [number, number][];
 
-    wireControls(map, stopCoords);
+    const routePolyline = extractRoutePolylineFromGeoJSON(routes);
+
+    wireControls(map, stopCoords, routePolyline);
   } catch (err) {
     console.error('Error initializing app:', err);
   }
 }
 
 bootstrap();
-

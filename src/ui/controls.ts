@@ -1,7 +1,8 @@
 import L from 'leaflet';
 import { findClosest, LatLon } from '../logic/snap';
+import { nearestOnPolyline, slicePolylineByDistance } from '../logic/route';
 
-export function wireControls(map: L.Map, stopCoords: LatLon[]) {
+export function wireControls(map: L.Map, stopCoords: LatLon[], routePolyline: LatLon[]) {
   const fromInput = document.getElementById('from') as HTMLInputElement | null;
   const toInput = document.getElementById('to') as HTMLInputElement | null;
   const visualizeBtn = document.getElementById('visualize') as HTMLButtonElement | null;
@@ -38,6 +39,18 @@ export function wireControls(map: L.Map, stopCoords: LatLon[]) {
       L.polyline([toClosest.coord, to], { color: 'orange', dashArray: '4,6' }).addTo(layer);
     }
 
+    // Route subpath between snapped stops (project both stops onto the route polyline)
+    if (routePolyline.length >= 2 && fromClosest && toClosest) {
+      const a = nearestOnPolyline(fromClosest.coord, routePolyline);
+      const b = nearestOnPolyline(toClosest.coord, routePolyline);
+      if (a && b) {
+        const segment = slicePolylineByDistance(routePolyline, a.routeDist, b.routeDist);
+        if (segment.length > 1) {
+          L.polyline(segment, { color: '#2c7fb8', weight: 5 }).addTo(layer);
+        }
+      }
+    }
+
     const bounds = L.latLngBounds([
       L.latLng(from[0], from[1]),
       L.latLng(to[0], to[1]),
@@ -47,4 +60,3 @@ export function wireControls(map: L.Map, stopCoords: LatLon[]) {
     map.fitBounds(bounds, { padding: [40, 40] });
   });
 }
-
