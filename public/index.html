@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DaRoutes — Dar Bus Map</title>
+  </head>
+  <body>
+    <div id="app">
+      <div id="controls" style="position:absolute;z-index:1000;background:#fff;padding:8px;margin:8px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);font-family:system-ui, sans-serif;">
+        <label>From: <input id="from" placeholder="-6.8, 39.25" size="16" /></label>
+        <label style="margin-left:8px;">To: <input id="to" placeholder="-6.81, 39.27" size="16" /></label>
+        <button id="visualize" style="margin-left:8px;">Visualize</button>
+      </div>
+      <div id="map" style="height:100vh;"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+  </html>
+

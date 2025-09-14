@@ -1,0 +1,369 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-1",
+        "name": "Ukwamani"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.222375,
+          -6.735882
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-2",
+        "name": "Oilcom"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.224341,
+          -6.736257
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-3",
+        "name": "Kanisani"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.227046,
+          -6.737538
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-4",
+        "name": "Kawe"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.229468,
+          -6.739053
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-5",
+        "name": "Msikitini"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.232048,
+          -6.740646
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-6",
+        "name": "Maringo"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.235626,
+          -6.741198
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-7",
+        "name": "JKT"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.239146,
+          -6.74556
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-8",
+        "name": "Clouds"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.241617,
+          -6.749885
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-9",
+        "name": "Mikocheni 'B'"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.243865,
+          -6.752828
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-10",
+        "name": "Warioba"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.247076,
+          -6.755873
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-11",
+        "name": "Kwa Mwalimu Nyerere"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.252337,
+          -6.760492
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-12",
+        "name": "Chama"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.260126,
+          -6.766052
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-13",
+        "name": "Kisiwani"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.263648,
+          -6.76964
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-14",
+        "name": "Ubalozi"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.264183,
+          -6.771311
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-15",
+        "name": "Morocco"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.26399,
+          -6.777646
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-16",
+        "name": "Biafra/Kanisani"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.263833,
+          -6.782222
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-17",
+        "name": "Kinondoni 'B'"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.263706,
+          -6.786
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-18",
+        "name": "Manyanya"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.263693,
+          -6.789518
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-19",
+        "name": "Studio"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.264531,
+          -6.79327
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-20",
+        "name": "Mkwajuni"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.264213,
+          -6.795898
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-21",
+        "name": "Kanisani"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.259078,
+          -6.805105
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-22",
+        "name": "Magomeni Mapipa"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.260471,
+          -6.808171
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-23",
+        "name": "Jangwani"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.268544,
+          -6.811073
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-24",
+        "name": "Fire"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.274676,
+          -6.813199
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-25",
+        "name": "Bakhresa"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.275835,
+          -6.814086
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "stop-26",
+        "name": "Gerezani"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.273891,
+          -6.815438
+        ]
+      }
+    }
+  ]
+}
