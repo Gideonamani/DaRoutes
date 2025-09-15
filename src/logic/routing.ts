@@ -1,6 +1,8 @@
 // Lightweight walking routing via OSRM public demo (for development).
 // For production, use your own OSRM/Valhalla/Mapbox/ORS backend.
 
+import { haversine } from './distance';
+
 export type LatLon = [number, number];
 
 export async function getWalkingRouteOSRM(from: LatLon, to: LatLon): Promise<LatLon[] | null> {
@@ -62,15 +64,15 @@ export async function findClosestStopByWalking(point: LatLon, stops: LatLon[], k
   }
 
   if (best) return best;
-  // Fallback to straight line nearest
+  // Fallback to straight-line distance using haversine formula
   let minI = 0;
   let minD = Infinity;
   stops.forEach((c, i) => {
-    const d = (point[0] - c[0]) ** 2 + (point[1] - c[1]) ** 2;
+    const d = haversine(point, c);
     if (d < minD) {
       minD = d;
       minI = i;
     }
   });
-  return { index: minI, coord: stops[minI], distanceMeters: Math.sqrt(minD) };
+  return { index: minI, coord: stops[minI], distanceMeters: minD };
 }

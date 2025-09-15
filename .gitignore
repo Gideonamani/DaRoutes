@@ -10,6 +10,7 @@ pnpm-debug.log*
 
 # Vite / build output
 dist/
+build/
 
 # TypeScript
 *.tsbuildinfo
