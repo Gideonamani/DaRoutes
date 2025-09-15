@@ -141,6 +141,20 @@ Post-Launch (Weeks 5–6)
 - Refine fare model and add route disambiguation.
 - Optional stretch: investigate MapLibre GL and vector tiles for perf.
 
+## Configuration
+
+### Custom OSRM endpoint
+
+The app fetches walking routes from an OSRM backend. By default it uses the
+public demo at `https://router.project-osrm.org`, which is not suitable for
+production use. To point the app at your own OSRM instance, set the
+`VITE_OSRM_BASE_URL` environment variable before running the dev server or
+building:
+
+```bash
+VITE_OSRM_BASE_URL="https://your-osrm.example.com" npm run dev
+```
+
 ## Risks & Mitigations
 
 - Data Quality: KML/CSV inconsistencies —> Normalize to GeoJSON with validation script, document assumptions.
