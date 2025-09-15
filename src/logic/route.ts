@@ -1,12 +1,13 @@
 import { haversine } from './distance';
+import type { FeatureCollection, Feature, Geometry } from 'geojson';
 
 export type LatLon = [number, number];
 
-export function extractRoutePolylineFromGeoJSON(collection: any): LatLon[] {
+export function extractRoutePolylineFromGeoJSON(collection: FeatureCollection<Geometry>): LatLon[] {
   const result: LatLon[] = [];
   if (!collection || !Array.isArray(collection.features)) return result;
-  for (const f of collection.features) {
-    const geom = f?.geometry;
+  for (const f of collection.features as Feature<Geometry>[]) {
+    const geom: Geometry | null = f?.geometry ?? null;
     if (!geom) continue;
     if (geom.type === 'LineString' && Array.isArray(geom.coordinates)) {
       for (const [lon, lat] of geom.coordinates) {
@@ -64,8 +65,17 @@ export function projectPointToSegment(p: LatLon, a: LatLon, b: LatLon, refLat: n
   return { t, point: [lat, lon] as LatLon, distance: dist };
 }
 
-export function nearestOnPolyline(p: LatLon, poly: LatLon[]) {
-  if (poly.length < 2) return null as any;
+export function nearestOnPolyline(
+  p: LatLon,
+  poly: LatLon[]
+): {
+  segIndex: number;
+  t: number;
+  point: LatLon;
+  dist: number;
+  routeDist: number;
+} | null {
+  if (poly.length < 2) return null;
   const refLat = p[0];
   let best = { segIndex: 0, t: 0, point: poly[0] as LatLon, dist: Infinity };
   for (let i = 0; i < poly.length - 1; i++) {
