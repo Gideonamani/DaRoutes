@@ -3,36 +3,44 @@
 
 export type LatLon = [number, number];
 
+// Base URL for the OSRM backend. Defaults to the public demo server.
+const OSRM_BASE_URL =
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_OSRM_BASE_URL) ||
+  'https://router.project-osrm.org';
+
+async function fetchJSONWithRetry(url: string, retries = 2): Promise<any | null> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return res.json();
+      console.error(`OSRM request failed (${res.status}) for ${url}`);
+    } catch (err) {
+      console.error(`OSRM request error for ${url}:`, err);
+    }
+  }
+  return null;
+}
+
 export async function getWalkingRouteOSRM(from: LatLon, to: LatLon): Promise<LatLon[] | null> {
   const [flat, flon] = from; // [lat, lon]
   const [tlat, tlon] = to;
-  const url = `https://router.project-osrm.org/route/v1/foot/${flon},${flat};${tlon},${tlat}?overview=full&geometries=geojson`;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const coords: [number, number][] | undefined = data?.routes?.[0]?.geometry?.coordinates;
-    if (!coords || !Array.isArray(coords)) return null;
-    // Convert [lon, lat] -> [lat, lon]
-    return coords.map(([lon, lat]) => [lat, lon]);
-  } catch {
-    return null;
-  }
+  const url = `${OSRM_BASE_URL}/route/v1/foot/${flon},${flat};${tlon},${tlat}?overview=full&geometries=geojson`;
+  const data = await fetchJSONWithRetry(url);
+  if (!data) return null;
+  const coords: [number, number][] | undefined = data?.routes?.[0]?.geometry?.coordinates;
+  if (!coords || !Array.isArray(coords)) return null;
+  // Convert [lon, lat] -> [lat, lon]
+  return coords.map(([lon, lat]) => [lat, lon]);
 }
 
 export async function getWalkingDistanceOSRM(from: LatLon, to: LatLon): Promise<number | null> {
   const [flat, flon] = from;
   const [tlat, tlon] = to;
-  const url = `https://router.project-osrm.org/route/v1/foot/${flon},${flat};${tlon},${tlat}?overview=false&alternatives=false&steps=false`;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const meters: number | undefined = data?.routes?.[0]?.distance;
-    return typeof meters === 'number' ? meters : null;
-  } catch {
-    return null;
-  }
+  const url = `${OSRM_BASE_URL}/route/v1/foot/${flon},${flat};${tlon},${tlat}?overview=false&alternatives=false&steps=false`;
+  const data = await fetchJSONWithRetry(url);
+  if (!data) return null;
+  const meters: number | undefined = data?.routes?.[0]?.distance;
+  return typeof meters === 'number' ? meters : null;
 }
 
 const walkCache = new Map<string, number>();
