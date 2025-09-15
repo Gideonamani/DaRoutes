@@ -224,10 +224,16 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
     if (spinner) spinner.classList.remove('hidden');
     const fromClosest = mode === 'walking'
       ? await findClosestStopByWalking(from, stopCoords, 6)
-      : (() => { const r = findClosest(from, stopCoords); return r && { index: r.index, coord: r.coord, distanceMeters: null as number | null }; })();
+      : (() => {
+          const r = findClosest(from, stopCoords);
+          return r && { index: r.index, coord: r.coord, distanceMeters: null as number | null };
+        })();
     const toClosest = mode === 'walking'
       ? await findClosestStopByWalking(to, stopCoords, 6)
-      : (() => { const r = findClosest(to, stopCoords); return r && { index: r.index, coord: r.coord, distanceMeters: null as number | null }; })();
+      : (() => {
+          const r = findClosest(to, stopCoords);
+          return r && { index: r.index, coord: r.coord, distanceMeters: null as number | null };
+        })();
 
     // Markers
     L.marker(from).addTo(layer).bindPopup('From');
@@ -283,8 +289,16 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
           const busMeters = Math.abs(b.routeDist - a.routeDist);
           const boardName = stops[fromClosest.index]?.name ?? 'Stop';
           const alightName = stops[toClosest.index]?.name ?? 'Stop';
-          const accessMeters = mode === 'walking' ? (fromClosest as any).distanceMeters ?? undefined : haversine(from, fromClosest.coord);
-          const egressMeters = mode === 'walking' ? (toClosest as any).distanceMeters ?? undefined : haversine(toClosest.coord, to);
+          const accessMeters = mode === 'walking'
+            ? fromClosest?.distanceMeters ?? undefined
+            : fromClosest
+            ? haversine(from, fromClosest.coord)
+            : undefined;
+          const egressMeters = mode === 'walking'
+            ? toClosest?.distanceMeters ?? undefined
+            : toClosest
+            ? haversine(toClosest.coord, to)
+            : undefined;
           const aKm = accessMeters != null ? (accessMeters / 1000).toFixed(2) : '—';
           const bKm = (busMeters / 1000).toFixed(2);
           const eKm = egressMeters != null ? (egressMeters / 1000).toFixed(2) : '—';
@@ -307,7 +321,6 @@ export function wireControls(map: L.Map, stops: StopItem[], routePolyline: LatLo
           if (playToggle) { playToggle.disabled = totalLen <= 0; playToggle.textContent = '▶ Play'; }
 
           // Direction chevrons along the route
-          decorLayer.removeLayer as any; // noop keep TS happy
           chevrons.forEach(m => decorLayer.removeLayer(m));
           chevrons = [];
           const step = Math.max(200, Math.floor(totalLen / 12));
